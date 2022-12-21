@@ -4,6 +4,7 @@ from discord import app_commands
 import random
 import aiohttp
 import datetime
+import asyncio
 
 bot = commands.Bot(command_prefix="!", intents=discord.Intents.all())
 
@@ -23,7 +24,8 @@ class UserInfo:
         self.score : int
 
 userList = []
-currentUserOwner : str
+currentOwner = None
+oldOwner = None
 
 # change this ID to your guild ID
 guildID = 1054434525637267558
@@ -61,17 +63,39 @@ async def callTheBot(ctx):
     if not whoTakeCareOfBot.is_running():
         whoTakeCareOfBot.start()
 
+def removeCurrentOwnerFromList():
+    global oldOwner
+    if currentOwner != None:
+        for i in range(0, len(userList)):
+            if userList[i].memberInfo.mention == currentOwner:
+                oldOwner = currentOwner
+                userList.remove(userList[i])
+                break
+
+def addOldOwnerToList():
+    if oldOwner != None:
+        for member in bot.get_all_members():
+            if member.mention == oldOwner:
+                userList.append(UserInfo(member))
+                break
+
 async def checkOwnerPresence(interaction : discord.Interaction, choice : str):
-    if (interaction.user.mention == currentUserOwner):
-        if (choice == "yes"):
-            await interaction.message.delete()
-            await interaction.channel.send("Thank you! :heart_eyes_cat:")
-        if (choice == "no"):
-            await interaction.message.delete()
-            await interaction.channel.send("You fall in my esteem :crying_cat_face:")
-            whoTakeCareOfBot.restart()
+    if currentOwner != None:
+        if interaction.user.mention == currentOwner:
+            if (choice == "yes"):
+                await interaction.message.delete()
+                await interaction.channel.send("Thank you! :heart_eyes_cat:")
+            if (choice == "no"):
+                await interaction.message.delete()
+                await interaction.channel.send("You fall in my esteem :crying_cat_face:")
+                removeCurrentOwnerFromList()
+                noAnswerOfTheMentionOwner.cancel()
+                await asyncio.sleep(5)
+                whoTakeCareOfBot.restart()
+        else:
+            await interaction.response.send_message(f"I'm waiting for the response of {currentOwner}... :crying_cat_face:", ephemeral=True)
     else:
-        await interaction.response.send_message(f"I'm waiting for the response of {currentUserOwner}... :crying_cat_face:", ephemeral=True)
+        await interaction.response.send_message("There is no one to take care of me :crying_cat_face: :crying_cat_face: :crying_cat_face:")
 
 class OwnerPresence(discord.ui.View):
     def __init__(self):
@@ -84,15 +108,35 @@ class OwnerPresence(discord.ui.View):
     async def no(self, interaction: discord.Interaction, button: discord.ui.Button):
         await checkOwnerPresence(interaction, "no")
 
+@tasks.loop(hours=1, count=1)
+async def noAnswerOfTheMentionOwner():
+    messageID = 0
+    async for message in bot.get_guild(guildID).get_channel(channelID).history():
+        if message.author == bot.user:
+            messageID = message.id
+            break
+    await asyncio.sleep(10)
+    message = await bot.get_guild(guildID).get_channel(channelID).fetch_message(messageID)
+    await message.delete()
+    await bot.get_guild(guildID).get_channel(channelID).send(f"Where are you {currentOwner}... I'm waiting for you... :crying_cat_face:\n\
+        You missed the opportunity, I'm sad...")
+    await asyncio.sleep(5)
+    removeCurrentOwnerFromList()
+    whoTakeCareOfBot.restart()
+    noAnswerOfTheMentionOwner.stop()
+
 @tasks.loop(hours=6)
 async def whoTakeCareOfBot():
-    global currentUserOwner
-    currentUserOwner = random.choice(userList).memberInfo.mention
+    global currentOwner
+    currentOwner = random.choice(userList).memberInfo.mention
+    addOldOwnerToList()
+    _view = OwnerPresence()
     try:
-        if (datetime.datetime.now().hour >= 0 and datetime.datetime.now().hour < 12):
-            await bot.get_guild(guildID).get_channel(channelID).send(f"I want {currentUserOwner} to take care of me this morning", view=OwnerPresence())
+        if datetime.datetime.now().hour >= 0 and datetime.datetime.now().hour < 12:
+            await bot.get_guild(guildID).get_channel(channelID).send(f"I want {currentOwner} to take care of me this morning :cat:", view=OwnerPresence())
         else:
-            await bot.get_guild(guildID).get_channel(channelID).send(f"I want {currentUserOwner} to take care of me this afternoon", view=OwnerPresence())
+            await bot.get_guild(guildID).get_channel(channelID).send(f"I want {currentOwner} to take care of me this afternoon :cat:", view=OwnerPresence())
+        noAnswerOfTheMentionOwner.start()
     except:
         return
 
