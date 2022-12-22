@@ -15,6 +15,7 @@ class PersistentViewBot(commands.Bot):
 
     async def setup_hook(self):
         self.add_view(HungryBotSelectMenuView())
+        self.add_view(StrokeBotButtons())
 
 bot = PersistentViewBot()
 
@@ -24,45 +25,74 @@ class UserInfo:
         self.score = 0
         self.scoreHungryBot = 0
 
-memberList = []
+memberList = {}
+currentMemberCalled = None
+
+# change this ID to your guild ID
+guildID = None
+
+# channel where the bot talks
+channelID = None
+
 
 currentOwner = None
 oldOwner = None
 
 def getMemberByID(memberID : int) -> UserInfo:
-    for member in memberList:
+    for member in memberList[guildID]:
         if member.memberInfo.id == memberID:
             return (member)
     return None
 
-# change this ID to your guild ID
-guildID = 1054434525637267558
-
-# channel where the bot talks
-channelID = None
-
 hungryGifs = ["https://media.tenor.com/sCsJ0l1gxHUAAAAd/cat-meme.gif", "https://media.tenor.com/fTTVgygGDh8AAAAd/kitty-cat-sandwich.gif"]
 hungryFoods = [["Poultry, Leg", '\N{POULTRY LEG}'], ["Cookie", '\N{COOKIE}'], ["Bacon", '\N{BACON}'], ["Fried Shrimp", '\N{FRIED SHRIMP}']]
+
+strokeGifs = ["https://media.tenor.com/762byUjvxi8AAAAS/dr-evil-stroke.gif", "https://media.tenor.com/HRFQ9DcDq6gAAAAS/stroking-cat-viralhog.gif",
+            "https://media.tenor.com/uFX64bs0eIUAAAAd/stroking-cat.gif", "https://media.tenor.com/i-htVw82J7wAAAAS/cat-leek.gif"]
+
+toysToPlayWithGifs = ["https://media.tenor.com/pq2tWPMudLgAAAAS/playful-kitten-cute.gif", "https://media.tenor.com/t9YX6fymF_AAAAAS/lola-cat.gif",
+                    "https://media.tenor.com/peSEPfmGL6MAAAAS/kitty-music.gif", "https://media.tenor.com/hvVwrpDdjSAAAAAd/whack-a-finger-cat.gif"]
+toysToPlayWith = ["🪢", "🧶", "🧵", "🐁", "🐭", "🐛", "🪱", "🪲", "🥒", "🥎", "🎾", "🎈", "📦"]
 
 @bot.event
 async def on_ready():
     global memberList
     print("Bot is online")
-    # try:
-    #     synced = await bot.tree.sync()
-    #     print(f"Synced {len(synced)} slash command(s)")
-    # except Exception as e:
-    #     print(e)
-    for member in bot.get_all_members():
-        if not member.bot:
-            memberList.append(UserInfo(member))
+    try:
+        synced = await bot.tree.sync()
+        print(f"Synced {len(synced)} slash command(s)")
+    except Exception as e:
+        print(e)
+    for guild in bot.guilds:
+        memberList[guild.id] = []
+        for member in guild.members:
+            if not member.bot:
+                memberList[guild.id].append(UserInfo(member))
+
+    # for member in bot.get_all_members():
+    #     if not member.bot:
+    #         memberList.append(UserInfo(member))
         # if member.id == 444171484085223424:
         #     memberList.append(UserInfo(member))
 
-@bot.command(name="callMyP3T")
-async def callTheBot(ctx):
+@bot.event
+async def on_message(message):
+    global guildID
     global channelID
-    channelID = ctx.message.channel.id
+    if message.guild != None:
+        guildID = message.guild.id
+        channelID = message.channel.id
+        await bot.process_commands(message)
+
+@bot.event
+async def on_command_error(ctx, error):
+    if isinstance(error, commands.CommandOnCooldown):
+        return
+
+# Call Bot Command
+@bot.command(name="callMyP3T")
+@commands.cooldown(1, 30, commands.BucketType.user)
+async def callTheBot(ctx):
     async with aiohttp.ClientSession() as session:
         async with session.get('http://aws.random.cat/meow') as resp:
             if resp.status == 200:
@@ -79,12 +109,17 @@ async def callTheBot(ctx):
         await ctx.send("https://media.tenor.com/DZmldC3h2oMAAAAS/cute-face-puss.gif")
     except Exception:
         await ctx.send(f"I'm wondering why **{ctx.message.author.display_name}** called me...")
-    await asyncio.sleep(5)
     if not hungryBot.is_running():
+        await asyncio.sleep(5)
         hungryBot.start()
+    if not strokeBot.is_running():
+        await asyncio.sleep(15)
+        strokeBot.start()
+    callTheBot.cooldown.per = 10
     # if not responseToCall.is_running():
     #     responseToCall.start()
 
+# Ranking Members Command
 def keySortByScore(member):
     return member.score
 
@@ -93,28 +128,28 @@ async def ranking(ctx):
     embed = discord.Embed(title="Ranking of MyP3T's Favorite Members",
     description="Those are the members that take care of me most of the time :heart_eyes_cat:",
     colour=discord.Colour.brand_red())
-    memberList.sort(key=keySortByScore, reverse=True)
+    memberList[guildID].sort(key=keySortByScore, reverse=True)
     members = ""
     scores = ""
     emoji = ""
     count = 0
-    for i in range (0, len(memberList)):
-        if i == 11 or memberList[i].score <= 0:
+    for i in range (0, len(memberList[guildID])):
+        if i == 11 or memberList[guildID][i].score <= 0:
             break
         if i == 0:
             emoji = ":crown:"
-            embed.set_thumbnail(url=f"{memberList[i].memberInfo.display_avatar}")
-            members += "**" + memberList[i].memberInfo.display_name + "**" + " " + emoji + "\n"
+            embed.set_thumbnail(url=f"{memberList[guildID][i].memberInfo.display_avatar}")
+            members += "**" + memberList[guildID][i].memberInfo.display_name + "**" + " " + emoji + "\n"
         elif i == 1:
             emoji = ":heart_on_fire:"
-            members += "**" + memberList[i].memberInfo.display_name + "**" + " " + emoji + "\n"
+            members += "**" + memberList[guildID][i].memberInfo.display_name + "**" + " " + emoji + "\n"
         elif i == 2:
             emoji = ":heart_eyes_cat:"
-            members += "**" + memberList[i].memberInfo.display_name + "**" + " " + emoji + "\n"
+            members += "**" + memberList[guildID][i].memberInfo.display_name + "**" + " " + emoji + "\n"
         else:
             emoji = ":star2:"
-            members += memberList[i].memberInfo.display_name + " " + emoji + "\n"
-        scores += str(memberList[i].score) + "\n"
+            members += memberList[guildID][i].memberInfo.display_name + " " + emoji + "\n"
+        scores += str(memberList[guildID][i].score) + "\n"
         count += 1
     if members == "":
         members = "No One Take Care of Me :crying_cat_face:"
@@ -125,6 +160,28 @@ async def ranking(ctx):
         embed.set_footer(text="Why are there so few people taking care of me...")
     await ctx.send(embed=embed)
 
+# Guess Toy To Play With Slash Command
+@bot.tree.command(name="toy", description="What kind of toy MyP3T would like to play with?")
+async def say(interaction: discord.Interaction):
+    embed = discord.Embed(title="Find the good toy!",
+    description="Hey @everyone! I would like a new toy to play with!\n\
+React to this message to find which toy would make me happy :smiley_cat:",
+    colour=discord.Colour.random())
+    embed.set_thumbnail(url=random.choice(toysToPlayWithGifs))
+    await interaction.response.send_message(embed=embed)
+    react = random.choice(toysToPlayWith)
+    print(react)
+    message = await interaction.original_response()
+    def checkReactions(reaction, user):
+        return reaction.message.id == message.id and str(reaction.emoji) == react
+    try:
+        reaction, user = await bot.wait_for("reaction_add", timeout=60, check=checkReactions)
+        await interaction.followup.send(f"Yeah! Thanks {user.mention} the toy was obviously a {reaction.emoji}")
+        getMemberByID(user.id).score += 2
+    except Exception:
+        await interaction.followup.send(f"Unfortunately no one find the toy I wanted\nNext time maybe...")
+
+# Hungry Bot Task
 class HungryBotSelectMenuView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -143,12 +200,12 @@ class HungryBotSelectMenu(discord.ui.Select):
             getMemberByID(interaction.user.id).scoreHungryBot = 1
         else:
             getMemberByID(interaction.user.id).scoreHungryBot = -1
-        await interaction.response.send_message("Thanks! I'm waiting for more food from the others :cat:", ephemeral=True)
+        await interaction.response.send_message("Thanks! I'm waiting more food from the others :cat:", ephemeral=True)
 
 @tasks.loop(hours=1, count=1)
 async def noMoreHungryBot():
     messageID = 0
-    async for message in bot.get_guild(guildID).get_channel(channelID).history():
+    async for message in bot.get_guild(guildID).get_channel(channelID).history(limit=200):
         if message.author == bot.user:
             messageID = message.id
             break
@@ -159,7 +216,7 @@ async def noMoreHungryBot():
     except:
         pass
     msg = "Thanks to "
-    for member in memberList:
+    for member in memberList[guildID]:
         if member.scoreHungryBot == 1:
             msg += "**" + member.memberInfo.display_name + "**" + ", "
         member.score += member.scoreHungryBot
@@ -180,24 +237,80 @@ async def hungryBot():
     await bot.get_guild(guildID).get_channel(channelID).send(embed=embed, view=HungryBotSelectMenuView())
     noMoreHungryBot.start()
 
+# Stroke Bot Task
+async def checkResponseStroke(interaction : discord.Interaction, choice : str):
+    if currentMemberCalled != None:
+        if interaction.user.id == currentMemberCalled.memberInfo.id:
+            if (choice == "yes"):
+                await interaction.message.delete()
+                await interaction.channel.send(random.choice(strokeGifs))
+                getMemberByID(interaction.user.id).score += 5
+                noResponseForStroking.cancel()
+            if (choice == "no"):
+                await interaction.message.delete()
+                await interaction.channel.send(":crying_cat_face: Why...")
+                getMemberByID(interaction.user.id).score -= 1
+                noResponseForStroking.cancel()
+        else:
+            await interaction.response.send_message(f"I'm waiting for **{currentMemberCalled.memberInfo.display_name}** :cat:", ephemeral=True)
+    else:
+        await interaction.response.send_message("There is no one to take care of me :crying_cat_face:")
 
+class StrokeBotButtons(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+    @discord.ui.button(label="Come here!", style=discord.ButtonStyle.primary, custom_id="YesStroke", emoji="🐈")
+    async def yes(self, interaction : discord.Interaction, button : discord.ui.Button):
+        await checkResponseStroke(interaction, "yes")
+
+    @discord.ui.button(label="Sorry I haven't the time", style=discord.ButtonStyle.red, custom_id="NoStroke")
+    async def no(self, interaction : discord.Interaction, button : discord.ui.Button):
+        await checkResponseStroke(interaction, "no")
+
+@tasks.loop(hours=1, count=1)
+async def noResponseForStroking():
+    messageID = 0
+    async for message in bot.get_guild(guildID).get_channel(channelID).history(limit=200):
+        if message.author == bot.user:
+            messageID = message.id
+            break
+    await asyncio.sleep(30)
+    try:
+        message = await bot.get_guild(guildID).get_channel(channelID).fetch_message(messageID)
+        await message.delete()
+    except:
+        pass
+    await bot.get_guild(guildID).get_channel(channelID).send(f"Where are you **{currentMemberCalled.memberInfo.display_name}**... I'm waiting for you... :crying_cat_face:\n\
+        You missed the opportunity, I'm sad...")
+    getMemberByID(currentMemberCalled.memberInfo.id).score -= 1
+    noResponseForStroking.stop()
+
+@tasks.loop(minutes=20)
+async def strokeBot():
+    global currentMemberCalled
+    currentMemberCalled = random.choice(memberList[guildID])
+    try:
+        await bot.get_guild(guildID).get_channel(channelID).send(f"Is {currentMemberCalled.memberInfo.mention} here? I want to be stroke", view=StrokeBotButtons())
+        noResponseForStroking.start()
+    except:
+        return
 
 
 
 def removeCurrentOwnerFromList():
     global oldOwner
     if currentOwner != None:
-        for member in memberList:
+        for member in memberList[guildID]:
             if member.memberInfo.mention == currentOwner:
                 oldOwner = currentOwner
-                memberList.remove(member)
+                memberList[guildID].remove(member)
                 break
 
 def addOldOwnerToList():
     if oldOwner != None:
         for member in bot.get_all_members():
             if member.mention == oldOwner:
-                memberList.append(UserInfo(member))
+                memberList[guildID].append(UserInfo(member))
                 break
 
 async def checkOwnerPresence(interaction : discord.Interaction, choice : str):
@@ -251,7 +364,7 @@ async def noAnswerOfTheMentionOwner():
 @tasks.loop(hours=6)
 async def whoTakeCareOfBot():
     global currentOwner
-    currentOwner = random.choice(memberList).memberInfo.mention
+    currentOwner = random.choice(memberList[guildID]).memberInfo.mention
     addOldOwnerToList()
     try:
         if datetime.datetime.now().hour >= 0 and datetime.datetime.now().hour < 12:
