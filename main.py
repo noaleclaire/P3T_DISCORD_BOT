@@ -161,7 +161,7 @@ async def ranking(ctx):
     await ctx.send(embed=embed)
 
 # Guess Toy To Play With Slash Command
-@bot.tree.command(name="toy", description="What kind of toy MyP3T would like to play with?")
+@bot.tree.command(name="toyGame", description="What kind of toy MyP3T would like to play with?")
 async def say(interaction: discord.Interaction):
     embed = discord.Embed(title="Find the good toy!",
     description="Hey @everyone! I would like a new toy to play with!\n\
@@ -170,16 +170,15 @@ React to this message to find which toy would make me happy :smiley_cat:",
     embed.set_thumbnail(url=random.choice(toysToPlayWithGifs))
     await interaction.response.send_message(embed=embed)
     react = random.choice(toysToPlayWith)
-    print(react)
     message = await interaction.original_response()
     def checkReactions(reaction, user):
         return reaction.message.id == message.id and str(reaction.emoji) == react
     try:
         reaction, user = await bot.wait_for("reaction_add", timeout=60, check=checkReactions)
-        await interaction.followup.send(f"Yeah! Thanks {user.mention} the toy was obviously a {reaction.emoji}")
+        await interaction.followup.send(f"Yeah! Thank you {user.mention} the toy was obviously a {reaction.emoji}")
         getMemberByID(user.id).score += 2
     except Exception:
-        await interaction.followup.send(f"Unfortunately no one find the toy I wanted\nNext time maybe...")
+        await interaction.followup.send(f"Unfortunately no one found the toy I wanted\nNext time maybe...")
 
 # Hungry Bot Task
 class HungryBotSelectMenuView(discord.ui.View):
@@ -282,7 +281,7 @@ async def noResponseForStroking():
         pass
     await bot.get_guild(guildID).get_channel(channelID).send(f"Where are you **{currentMemberCalled.memberInfo.display_name}**... I'm waiting for you... :crying_cat_face:\n\
         You missed the opportunity, I'm sad...")
-    getMemberByID(currentMemberCalled.memberInfo.id).score -= 1
+    getMemberByID(currentMemberCalled.memberInfo.id).score -= 2
     noResponseForStroking.stop()
 
 @tasks.loop(minutes=20)
@@ -290,7 +289,7 @@ async def strokeBot():
     global currentMemberCalled
     currentMemberCalled = random.choice(memberList[guildID])
     try:
-        await bot.get_guild(guildID).get_channel(channelID).send(f"Is {currentMemberCalled.memberInfo.mention} here? I want to be stroke", view=StrokeBotButtons())
+        await bot.get_guild(guildID).get_channel(channelID).send(f"Is {currentMemberCalled.memberInfo.mention} here? I want to be stroked", view=StrokeBotButtons())
         noResponseForStroking.start()
     except:
         return
