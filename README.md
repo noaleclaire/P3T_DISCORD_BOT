@@ -27,6 +27,7 @@ A slash command always start with a **/** <br /><br />
 - toyGame : A little game where the first member to find the correct toy by responding with the correct emoji win
 ___
 ## Tasks
+**Those are the tasks implemented:**
 - hungryBot : Each 30 minutes the bot asks for foods, you need to select the correct food in the suggest select menu
 - strokeBot : Each 20 minutes the bot asks a random member to stroking him, this member needs to give is answer
 ___
