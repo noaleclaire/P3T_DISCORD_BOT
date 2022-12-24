@@ -29,7 +29,7 @@ ___
 ## Tasks
 **Those are the tasks implemented:**
 - hungryBot : Each 30 minutes the bot asks for foods, you need to select the correct food in the suggest select menu
-- strokeBot : Each 20 minutes the bot asks a random member to stroking him, this member needs to give is answer
+- strokeBot : Each 20 minutes the bot asks a random member to stroking him, this member needs to give his answer
 ___
 <!--
 
