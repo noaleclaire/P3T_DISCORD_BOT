@@ -24,7 +24,7 @@ ___
 ## Slash Commands
 A slash command always start with a **/** <br /><br />
 **Those are the slash commands implemented:**
-- toyGame : A little game where the first member to find the correct toy by responding with the correct emoji win
+- toyGame : A little game where the first member to find the correct toy by reacting with the correct emoji win
 ___
 ## Tasks
 **Those are the tasks implemented:**
