@@ -34,10 +34,6 @@ guildID = None
 # channel where the bot talks
 channelID = None
 
-
-currentOwner = None
-oldOwner = None
-
 def getMemberByID(memberID : int) -> UserInfo:
     for member in memberList[guildID]:
         if member.memberInfo.id == memberID:
@@ -68,12 +64,6 @@ async def on_ready():
         for member in guild.members:
             if not member.bot:
                 memberList[guild.id].append(UserInfo(member))
-
-    # for member in bot.get_all_members():
-    #     if not member.bot:
-    #         memberList.append(UserInfo(member))
-        # if member.id == 444171484085223424:
-        #     memberList.append(UserInfo(member))
 
 @bot.event
 async def on_message(message):
@@ -116,8 +106,6 @@ async def callTheBot(ctx):
         await asyncio.sleep(15)
         strokeBot.start()
     callTheBot.cooldown.per = 10
-    # if not responseToCall.is_running():
-    #     responseToCall.start()
 
 # Ranking Members Command
 def keySortByScore(member):
@@ -294,97 +282,4 @@ async def strokeBot():
     except:
         return
 
-
-
-def removeCurrentOwnerFromList():
-    global oldOwner
-    if currentOwner != None:
-        for member in memberList[guildID]:
-            if member.memberInfo.mention == currentOwner:
-                oldOwner = currentOwner
-                memberList[guildID].remove(member)
-                break
-
-def addOldOwnerToList():
-    if oldOwner != None:
-        for member in bot.get_all_members():
-            if member.mention == oldOwner:
-                memberList[guildID].append(UserInfo(member))
-                break
-
-async def checkOwnerPresence(interaction : discord.Interaction, choice : str):
-    if currentOwner != None:
-        if interaction.user.mention == currentOwner:
-            if (choice == "yes"):
-                await interaction.message.delete()
-                await interaction.channel.send("Thank you! :heart_eyes_cat:")
-                getMemberByID(interaction.user.id).score += 1
-                noAnswerOfTheMentionOwner.cancel()
-            if (choice == "no"):
-                await interaction.message.delete()
-                await interaction.channel.send("You fall in my esteem :crying_cat_face:")
-                removeCurrentOwnerFromList()
-                noAnswerOfTheMentionOwner.cancel()
-                await asyncio.sleep(5)
-                whoTakeCareOfBot.restart()
-        else:
-            await interaction.response.send_message(f"I'm waiting for the response of {currentOwner}... :crying_cat_face:", ephemeral=True)
-    else:
-        await interaction.response.send_message("There is no one to take care of me :crying_cat_face: :crying_cat_face: :crying_cat_face:")
-
-class OwnerPresence(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=None)
-    @discord.ui.button(label="Yes no problem!", style=discord.ButtonStyle.primary, custom_id="YesCare")
-    async def yes(self, interaction : discord.Interaction, button : discord.ui.Button):
-        await checkOwnerPresence(interaction, "yes")
-
-    @discord.ui.button(label="Sorry I haven't the time", style=discord.ButtonStyle.red, custom_id="NoCare")
-    async def no(self, interaction : discord.Interaction, button : discord.ui.Button):
-        await checkOwnerPresence(interaction, "no")
-
-@tasks.loop(hours=1, count=1)
-async def noAnswerOfTheMentionOwner():
-    messageID = 0
-    async for message in bot.get_guild(guildID).get_channel(channelID).history():
-        if message.author == bot.user:
-            messageID = message.id
-            break
-    await asyncio.sleep(10)
-    message = await bot.get_guild(guildID).get_channel(channelID).fetch_message(messageID)
-    await message.delete()
-    await bot.get_guild(guildID).get_channel(channelID).send(f"Where are you {currentOwner}... I'm waiting for you... :crying_cat_face:\n\
-        You missed the opportunity, I'm sad...")
-    await asyncio.sleep(5)
-    removeCurrentOwnerFromList()
-    whoTakeCareOfBot.restart()
-    noAnswerOfTheMentionOwner.stop()
-
-@tasks.loop(hours=6)
-async def whoTakeCareOfBot():
-    global currentOwner
-    currentOwner = random.choice(memberList[guildID]).memberInfo.mention
-    addOldOwnerToList()
-    try:
-        if datetime.datetime.now().hour >= 0 and datetime.datetime.now().hour < 12:
-            await bot.get_guild(guildID).get_channel(channelID).send(f"I want {currentOwner} to take care of me this morning :cat:", view=OwnerPresence())
-        else:
-            await bot.get_guild(guildID).get_channel(channelID).send(f"I want {currentOwner} to take care of me this afternoon :cat:", view=OwnerPresence())
-        noAnswerOfTheMentionOwner.start()
-    except:
-        return
-
-# @bot.tree.command(name="ping", description="test")
-# async def ping(interaction: discord.Interaction):
-#     await interaction.response.send_message(f"pong {interaction.user.mention}", ephemeral=True) #ephemeral -> only the user see the response
-
-# @bot.tree.command(name="say", description="1224563")
-# @app_commands.describe(thing_to_say="What should I say?")
-# async def say(interaction: discord.Interaction, thing_to_say: str):
-#     await interaction.response.send_message(f"{interaction.user.name} said: `{thing_to_say}`")
-
-# @bot.command()
-# async def hello(ctx):
-#     await ctx.send("Hey Bro!")
-
-bot.run("")
+bot.run("BOT TOKEN")
