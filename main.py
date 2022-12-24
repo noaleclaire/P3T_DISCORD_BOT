@@ -28,9 +28,7 @@ class UserInfo:
 memberList = {}
 currentMemberCalled = None
 
-# change this ID to your guild ID
 guildID = None
-
 # channel where the bot talks
 channelID = None
 
